@@ -1,0 +1,49 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Libros - Biblioteca IESADEP</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"></head><body>
+<div class="container py-4">
+  <a href="index.html" class="btn btn-link">&larr; Volver</a>
+  <h2>Libros</h2>
+  <div class="d-flex mb-2">
+    <input id="q" class="form-control me-2" placeholder="Buscar por título, autor o ISBN">
+    <button id="btn-search" class="btn btn-outline-primary">Buscar</button>
+    <button id="btn-new" class="btn btn-primary ms-2">Nuevo libro (admin)</button>
+    <a id="export-csv" class="btn btn-success ms-2" href="/api/books/export" target="_blank">Exportar CSV</a>
+    <label class="btn btn-secondary ms-2">Importar <input id="file-books" type="file" hidden></label>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped" id="tbl-books">
+      <thead><tr><th>ISBN</th><th>Título</th><th>Autor</th><th>Estado</th><th>Ubicación</th><th>Sede</th><th>Acciones</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+<script src="common.js"></script>
+<script>
+async function load(q){
+  const res = await fetch('/api/books?q='+(q||'')); const data = await res.json();
+  const tbody = document.querySelector('#tbl-books tbody'); tbody.innerHTML='';
+  data.forEach(b=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${b.isbn}</td><td>${b.title}</td><td>${b.author}</td><td>${b.state}</td><td>${b.location}</td><td>${b.branch}</td>
+    <td>
+      <button class="btn btn-sm btn-warning btn-edit" data-id="${b.id}">Editar</button>
+      <button class="btn btn-sm btn-danger btn-del" data-id="${b.id}">Eliminar</button>
+    </td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll('.btn-del').forEach(b=>{
+    b.onclick = async e=>{ if(!confirm('Eliminar?')) return; const id=e.target.dataset.id; await fetch('/api/books/'+id,{method:'DELETE', headers: API.authHeaders()}); load(q); };
+  });
+}
+document.getElementById('btn-search').onclick = ()=> load(document.getElementById('q').value);
+document.getElementById('file-books').onchange = async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  await fetch('/api/books/import', {method:'POST', body: fd, headers: API.authHeaders()});
+  alert('Importado (si token autorizado).'); load();
+};
+load();
+</script>
+</body></html>

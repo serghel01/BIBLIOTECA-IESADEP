@@ -1,0 +1,47 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Préstamos - Biblioteca IESADEP</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="styles.css" rel="stylesheet"></head><body>
+<div class="container py-4">
+  <a href="index.html" class="btn btn-link">&larr; Volver</a>
+  <h2>Préstamos</h2>
+  <p>Registrar préstamo (admin)</p>
+  <form id="loan-form" class="row g-2">
+    <div class="col-md-5"><input id="user-q" class="form-control" placeholder="Buscar usuario por nombre o documento"></div>
+    <div class="col-md-5"><input id="book-q" class="form-control" placeholder="Buscar libro por ISBN, título o autor"></div>
+    <div class="col-md-2"><button class="btn btn-primary">Registrar préstamo</button></div>
+  </form>
+  <hr>
+  <div id="loans-list"></div>
+</div>
+<script src="common.js"></script>
+<script>
+document.getElementById('loan-form').onsubmit = async e=>{
+  e.preventDefault();
+  const userQ = document.getElementById('user-q').value;
+  const bookQ = document.getElementById('book-q').value;
+  // simple search
+  const uRes = await fetch('/api/users?q='+encodeURIComponent(userQ)); const users = await uRes.json();
+  const bRes = await fetch('/api/books?q='+encodeURIComponent(bookQ)); const books = await bRes.json();
+  if(users.length===0 || books.length===0){ alert('Usuario o libro no encontrado'); return; }
+  const body = { userId: users[0].id, bookId: books[0].id, loanDate: new Date().toISOString(), dueDate: null };
+  await fetch('/api/loans', {method:'POST', headers: Object.assign({'Content-Type':'application/json'}, API.authHeaders()), body: JSON.stringify(body)});
+  alert('Préstamo registrado');
+  loadLoans();
+};
+async function loadLoans(){
+  const res = await fetch('/api/loans'); const data = await res.json();
+  const html = ['<h3>Préstamos recientes</h3>','<div class="table-responsive"><table class="table"><thead><tr><th>Usuario</th><th>Libro</th><th>Fecha</th><th>Devuelto</th><th>Acciones</th></tr></thead><tbody>'];
+  data.forEach(l=>{
+    html.push('<tr><td>'+ (l.userName||'') +'</td><td>'+ (l.bookTitle||'') +'</td><td>'+ (new Date(l.loanDate).toLocaleString()) +'</td><td>'+(l.returned? 'Sí':'No')+'</td><td>' + (l.returned ? '' : '<button class="btn btn-sm btn-success" data-id="'+l.id+'" onclick="returnLoan(\''+l.id+'\')">Devolver</button>') + '</td></tr>');
+  });
+  html.push('</tbody></table></div>');
+  document.getElementById('loans-list').innerHTML = html.join('');
+}
+async function returnLoan(id){
+  await fetch('/api/loans/'+id+'/return', {method:'POST', headers: API.authHeaders()});
+  loadLoans();
+}
+loadLoans();
+</script>
+</body></html>

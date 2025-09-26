@@ -1,0 +1,6 @@
+body {
+  background: linear-gradient(90deg, #0f5132 0%, #ffffff 50%, #ffd43b 100%);
+  min-height: 100vh;
+}
+.escudo{ width:120px; height:120px; object-fit:contain; }
+.kpi { text-align:center; }
